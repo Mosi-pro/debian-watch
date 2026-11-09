@@ -1,0 +1,12 @@
+# Achtung: Das Terminal ist eine Shell IM Container. Fuer Metriken/Terminal des
+# Hosts ist die systemd-Installation (install.sh) die bessere Wahl.
+services:
+  mosideck:
+    image: ghcr.io/mosi-pro/debian-watch:latest
+    restart: unless-stopped
+    ports: ["8443:8443"]
+    pid: host            # Prozesse des Hosts im Dashboard
+    volumes:
+      - mosideck-data:/var/lib/mosideck
+volumes:
+  mosideck-data:

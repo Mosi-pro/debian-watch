@@ -1,0 +1,41 @@
+version: 2
+project_name: mosideck
+before:
+  hooks:
+    - go mod tidy
+builds:
+  - main: ./cmd/mosideck
+    binary: mosideck
+    env: [CGO_ENABLED=0]
+    goos: [linux]
+    goarch: [amd64, arm64]
+    flags: [-trimpath]
+    ldflags: ["-s -w -X main.version={{.Version}}"]
+archives:
+  - formats: [tar.gz]
+    name_template: "mosideck_{{ .Version }}_{{ .Os }}_{{ .Arch }}"
+    files:
+      - src: deploy/config.toml
+        dst: deploy/
+      - src: deploy/mosideck.service
+        dst: deploy/
+      - README.md
+checksum:
+  name_template: checksums.txt
+nfpms:
+  - package_name: mosideck
+    vendor: Mosi-pro
+    homepage: https://github.com/Mosi-pro/debian-watch
+    description: Homelab-Cockpit - Login, Web-Terminal, Live-Metriken
+    formats: [deb]
+    bindir: /usr/local/bin
+    contents:
+      - src: deploy/mosideck.service
+        dst: /etc/systemd/system/mosideck.service
+      - src: deploy/config.toml
+        dst: /etc/mosideck/config.toml
+        type: config|noreplace
+    scripts:
+      postinstall: deploy/postinstall.sh
+changelog:
+  sort: asc

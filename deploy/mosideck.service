@@ -1,0 +1,18 @@
+[Unit]
+Description=MosiDeck Homelab-Cockpit
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+User=mosideck
+Group=mosideck
+ExecStart=/usr/local/bin/mosideck -c /etc/mosideck/config.toml serve
+Restart=on-failure
+RestartSec=3
+# Port 80 fuer den HTTP->HTTPS-Redirect
+AmbientCapabilities=CAP_NET_BIND_SERVICE
+# Bewusst KEIN NoNewPrivileges/ProtectSystem: das Web-Terminal soll eine
+# normale Shell inkl. sudo sein. Der Dienst selbst laeuft nicht als root.
+
+[Install]
+WantedBy=multi-user.target

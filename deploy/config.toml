@@ -1,0 +1,29 @@
+# MosiDeck Konfiguration (key = value)
+
+# HTTPS-Adresse. Standard: alle Interfaces, Zugriff wird auf LAN/WireGuard-IPs beschraenkt.
+listen = "0.0.0.0:8443"
+
+# Optional: HTTP -> HTTPS Redirect (Port 80 braucht CAP_NET_BIND_SERVICE, siehe systemd-Unit)
+# redirect_http = "0.0.0.0:80"
+
+# Name fuer das Self-Signed-Zertifikat (DNS-Eintrag im Router/Pi-hole: mosi.homelab -> Server-IP)
+hostname = "mosi.homelab"
+
+data_dir = "/var/lib/mosideck"
+
+# Eigenes Zertifikat (z.B. von Caddy/interner CA) statt Self-Signed:
+# tls_cert = "/etc/mosideck/mosi.crt"
+# tls_key  = "/etc/mosideck/mosi.key"
+
+# Hinter eigenem Reverse-Proxy (Caddy/nginx) ohne TLS im Dienst:
+# disable_tls = true
+# trust_proxy = true
+
+# Shell fuer das Terminal (Standard: Login-Shell des Dienst-Benutzers)
+# shell = "/bin/bash"
+
+session_hours = 12
+
+# NICHT empfohlen:
+# allow_public = false   # Zugriff auch aus oeffentlichen IP-Bereichen erlauben
+# allow_root   = false   # Terminal als root erlauben
