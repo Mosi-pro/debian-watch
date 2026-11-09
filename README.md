@@ -17,7 +17,8 @@ curl -fsSL https://raw.githubusercontent.com/Mosi-pro/debian-watch/main/deploy/i
 Danach:
 
 1. **DNS-Eintrag** `mosi.sail → Server-IP` im Router (Fritz!Box: Heimnetz → Netzwerk → Gerät) oder in Pi-hole/dnsmasq anlegen.
-2. `https://mosi.sail` öffnen, Zertifikatswarnung bestätigen (self-signed, `/var/lib/mosisail/mosisail.crt` lässt sich auf Geräten als vertrauenswürdig installieren) und beim ersten Aufruf den Benutzer anlegen.
+2. `https://mosi.sail` öffnen, die Zertifikatswarnung einmal bestätigen und beim ersten Aufruf den Benutzer anlegen.
+3. Optional, damit die Warnung verschwindet: auf der Login-Seite **„Zertifikat herunterladen“** (`https://mosi.sail/ca.crt`) und auf dem Gerät als vertrauenswürdig installieren (Windows: Doppelklick → „Vertrauenswürdige Stammzertifizierungsstellen“; iOS: Profil installieren und unter Einstellungen → Allgemein → Info → Zertifikatsvertrauenseinstellungen aktivieren; Android: Einstellungen → Sicherheit → Zertifikat installieren). Das Zertifikat ist nur für `mosi.sail`, den Servernamen und die lokalen IPs ausgestellt.
 
 Gibt es noch kein GitHub-Release, baut der Installer MosiSail selbst aus dem Quellcode (lädt bei Bedarf ein temporäres Go).
 Update: denselben Befehl erneut ausführen.

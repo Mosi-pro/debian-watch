@@ -4,6 +4,9 @@ import (
 	"errors"
 	"fmt"
 	"net/http"
+	"os"
+	"path/filepath"
+	"strings"
 	"time"
 
 	"github.com/mosi-pro/debian-watch/internal/audit"
@@ -230,6 +233,7 @@ func (c *Core) apiUserDel(w http.ResponseWriter, r *http.Request, sess auth.Sess
 // Mount registriert Login/Setup/Konto-Endpunkte unter /api/.
 func (c *Core) Mount(mux *http.ServeMux) {
 	mux.HandleFunc("GET /api/state", c.apiState)
+	mux.HandleFunc("GET /ca.crt", c.serveCert)
 	mux.HandleFunc("POST /api/setup", c.apiSetup)
 	mux.HandleFunc("POST /api/login", c.apiLogin)
 	mux.HandleFunc("POST /api/logout", c.Authed(c.apiLogout))
@@ -243,4 +247,20 @@ func (c *Core) Mount(mux *http.ServeMux) {
 	mux.HandleFunc("GET /api/audit", c.Authed(func(w http.ResponseWriter, r *http.Request, _ auth.Session, _ string) {
 		WriteJSON(w, 200, audit.Tail(c.AuditPath, 200))
 	}))
+}
+
+// serveCert liefert das (oeffentliche) Self-Signed-Zertifikat zum Installieren auf Geraeten.
+func (c *Core) serveCert(w http.ResponseWriter, r *http.Request) {
+	if c.Opt.TLSCert != "" || !c.TLS {
+		http.NotFound(w, r)
+		return
+	}
+	b, err := os.ReadFile(filepath.Join(c.Opt.DataDir, strings.ToLower(c.Opt.Name)+".crt"))
+	if err != nil {
+		http.NotFound(w, r)
+		return
+	}
+	w.Header().Set("Content-Type", "application/x-x509-ca-cert")
+	w.Header().Set("Content-Disposition", `attachment; filename="`+strings.ToLower(c.Opt.Name)+`.crt"`)
+	w.Write(b)
 }

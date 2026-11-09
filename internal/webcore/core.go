@@ -100,7 +100,7 @@ func (c *Core) Serve(ctx context.Context, h http.Handler) error {
 		if c.Opt.TLSCert != "" {
 			cert, err = tls.LoadX509KeyPair(c.Opt.TLSCert, c.Opt.TLSKey)
 		} else {
-			cert, err = selfSigned(c.Opt.DataDir, c.Opt.Hostname)
+			cert, err = selfSigned(c.Opt.DataDir, c.Opt.Hostname, c.Opt.Name)
 		}
 		if err != nil {
 			return err
@@ -185,7 +185,8 @@ func (c *Core) secHeaders(next http.Handler) http.Handler {
 		h.Set("X-Frame-Options", "DENY")
 		h.Set("Referrer-Policy", "no-referrer")
 		h.Set("Cache-Control", "no-store")
-		if c.TLS {
+		// HSTS nur mit eigenem (vertrauenswuerdigem) Zertifikat, sonst laesst sich die Warnung bei Self-Signed nicht mehr bestaetigen
+		if c.TLS && c.Opt.TLSCert != "" {
 			h.Set("Strict-Transport-Security", "max-age=31536000")
 		}
 		next.ServeHTTP(w, r)

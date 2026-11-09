@@ -12,13 +12,15 @@ import (
 	"net"
 	"os"
 	"path/filepath"
+	"strings"
 	"time"
 )
 
 // selfSigned loads or creates a self-signed cert for hostname + local IPs.
 // The cert is also written as <dir>/mosideck.crt so it can be installed as trusted on clients.
-func selfSigned(dir, hostname string) (tls.Certificate, error) {
-	crt, key := filepath.Join(dir, "mosideck.crt"), filepath.Join(dir, "mosideck.key")
+func selfSigned(dir, hostname, app string) (tls.Certificate, error) {
+	base := strings.ToLower(app)
+	crt, key := filepath.Join(dir, base+".crt"), filepath.Join(dir, base+".key")
 	if c, err := tls.LoadX509KeyPair(crt, key); err == nil {
 		if leaf, err := x509.ParseCertificate(c.Certificate[0]); err == nil && time.Until(leaf.NotAfter) > 30*24*time.Hour {
 			return c, nil
@@ -31,7 +33,7 @@ func selfSigned(dir, hostname string) (tls.Certificate, error) {
 	serial, _ := rand.Int(rand.Reader, new(big.Int).Lsh(big.NewInt(1), 120))
 	tpl := x509.Certificate{
 		SerialNumber: serial,
-		Subject:      pkix.Name{CommonName: hostname, Organization: []string{"MosiDeck"}},
+		Subject:      pkix.Name{CommonName: hostname, Organization: []string{app}},
 		NotBefore:    time.Now().Add(-time.Hour),
 		NotAfter:     time.Now().AddDate(2, 0, 0),
 		KeyUsage:     x509.KeyUsageDigitalSignature,

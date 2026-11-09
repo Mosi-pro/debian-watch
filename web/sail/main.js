@@ -21,7 +21,7 @@ function loginView(setup) {
     catch (x) { if (x.data && x.data.need_totp) { cw.hidden = false; c.focus(); } err.textContent = x.message; }
   } }, h('label', {}, 'Benutzer'), u, h('label', {}, setup ? 'Passwort (min. 10 Zeichen)' : 'Passwort'), p, cw, h('button', { class: 'btn pri' }, setup ? 'Admin anlegen' : 'Anmelden'), err);
   $app.replaceChildren(h('div', { class: 'center' }, h('div', { class: 'card login' },
-    h('div', { class: 'logo' }, icon('logo'), h('span', {}, 'Mosi', h('b', {}, 'Sail'))), h('p', { class: 'mut', style: 'margin:0 0 8px' }, setup ? 'Ersteinrichtung: lege den Admin-Benutzer an.' : 'Segel-Cockpit · Ammersee'), form)));
+    h('div', { class: 'logo' }, icon('logo'), h('span', {}, 'Mosi', h('b', {}, 'Sail'))), h('p', { class: 'mut', style: 'margin:0 0 8px' }, setup ? 'Ersteinrichtung: lege den Admin-Benutzer an.' : 'Segel-Cockpit · Ammersee'), form, h('p', { class: 'mut small', style: 'margin:16px 0 0;text-align:center' }, location.protocol === 'https:' ? h('a', { href: '/ca.crt', style: 'color:var(--acc)' }, 'Zertifikat herunterladen') : null))));
 }
 
 const VIEWS = [['cockpit', 'Cockpit', cockpitView], ['map', 'Karte', mapView], ['log', 'Logbuch', logbookView], ['season', 'Saison', seasonView]];
