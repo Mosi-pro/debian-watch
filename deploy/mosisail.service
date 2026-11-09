@@ -1,0 +1,27 @@
+[Unit]
+Description=MosiSail Segel-Cockpit
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+User=mosisail
+Group=mosisail
+ExecStart=/usr/local/bin/mosisail -c /etc/mosisail/config.toml serve
+Restart=on-failure
+RestartSec=3
+# Ports 80/443 ohne root
+AmbientCapabilities=CAP_NET_BIND_SERVICE
+CapabilityBoundingSet=CAP_NET_BIND_SERVICE
+# Kein Terminal in dieser App, daher volle Haertung moeglich
+NoNewPrivileges=true
+ProtectSystem=strict
+ProtectHome=true
+PrivateTmp=true
+PrivateDevices=true
+ReadWritePaths=/var/lib/mosisail
+ProtectKernelTunables=true
+ProtectControlGroups=true
+RestrictAddressFamilies=AF_INET AF_INET6 AF_UNIX
+
+[Install]
+WantedBy=multi-user.target

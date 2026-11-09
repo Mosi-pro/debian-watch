@@ -1,10 +1,14 @@
 #!/usr/bin/env bash
-# MosiDeck Installer (Debian/Ubuntu mit systemd).
-#   curl -fsSL https://raw.githubusercontent.com/Mosi-pro/debian-watch/main/deploy/install.sh | bash   (als root; mit sudo: ... | sudo bash)
-# Optional: MOSIDECK_VERSION=v1.2.3 fuer eine feste Version.
+# Installer fuer MosiDeck (Homelab-Cockpit) und MosiSail (Segel-Cockpit) -- Debian/Ubuntu mit systemd.
+#   MosiDeck: curl -fsSL https://raw.githubusercontent.com/Mosi-pro/debian-watch/main/deploy/install.sh | bash
+#   MosiSail: curl -fsSL https://raw.githubusercontent.com/Mosi-pro/debian-watch/main/deploy/install.sh | bash -s -- mosisail
+# (als root; mit sudo: ... | sudo bash ...)
+# Optional: MOSIDECK_VERSION=v1.2.3 fuer eine feste Version, MOSIDECK_REF=<branch|commit> fuer den Quellcode-Build.
 set -euo pipefail
 
 REPO="Mosi-pro/debian-watch"
+APP="${1:-mosideck}"
+case "$APP" in mosideck|mosisail) ;; *) echo "Unbekannte App '$APP' (mosideck oder mosisail)." >&2; exit 1 ;; esac
 [ "$(id -u)" = 0 ] || { echo "Bitte mit sudo/root ausfuehren." >&2; exit 1; }
 command -v systemctl >/dev/null || { echo "systemd wird benoetigt." >&2; exit 1; }
 for c in curl tar sha256sum; do command -v "$c" >/dev/null || { echo "$c fehlt (apt install $c)." >&2; exit 1; }; done
@@ -27,14 +31,14 @@ fi
 
 if [ -n "$TAG" ]; then
   VER="${TAG#v}"
-  ARCHIVE="mosideck_${VER}_linux_${ARCH}.tar.gz"
+  ARCHIVE="${APP}_${VER}_linux_${ARCH}.tar.gz"
   BASE="https://github.com/$REPO/releases/download/$TAG"
-  echo "==> Lade MosiDeck $TAG ($ARCH)"
+  echo "==> Lade $APP $TAG ($ARCH)"
   curl -fsSL -o "$TMP/$ARCHIVE" "$BASE/$ARCHIVE"
   curl -fsSL -o "$TMP/checksums.txt" "$BASE/checksums.txt"
   ( cd "$TMP" && grep " $ARCHIVE\$" checksums.txt | sha256sum -c - ) || { echo "Pruefsumme falsch, Abbruch." >&2; exit 1; }
   tar -xzf "$TMP/$ARCHIVE" -C "$TMP"
-  BIN="$TMP/mosideck"; DEPLOY="$TMP/deploy"
+  BIN="$TMP/$APP"; DEPLOY="$TMP/deploy"
 else
   echo "==> Noch kein Release vorhanden, baue aus dem Quellcode ($REF) -- dauert ca. 1-2 Minuten"
   GOBIN_PATH=""
@@ -55,24 +59,36 @@ else
   curl -fsSL "https://github.com/$REPO/archive/$REF.tar.gz" | tar -xz -C "$TMP"
   SRC=$(echo "$TMP"/debian-watch-*)
   ( cd "$SRC" && GOTOOLCHAIN=local GOCACHE="$TMP/gocache" GOPATH="$TMP/gopath" CGO_ENABLED=0 \
-      "$GOBIN_PATH" build -trimpath -ldflags "-s -w -X main.version=$REF" -o "$TMP/mosideck" ./cmd/mosideck )
-  BIN="$TMP/mosideck"; DEPLOY="$SRC/deploy"
+      "$GOBIN_PATH" build -trimpath -ldflags "-s -w -X main.version=$REF" -o "$TMP/$APP" ./cmd/$APP )
+  BIN="$TMP/$APP"; DEPLOY="$SRC/deploy"
   TAG="$REF"
 fi
 
-getent group mosideck >/dev/null || groupadd --system mosideck
-id mosideck >/dev/null 2>&1 || useradd --system --gid mosideck --home-dir /var/lib/mosideck --create-home --shell /bin/bash mosideck
-install -d -m 0700 -o mosideck -g mosideck /var/lib/mosideck
-install -d -m 0755 /etc/mosideck
-install -m 0755 "$BIN" /usr/local/bin/mosideck
-[ -f /etc/mosideck/config.toml ] || install -m 0644 "$DEPLOY/config.toml" /etc/mosideck/config.toml
-install -m 0644 "$DEPLOY/mosideck.service" /etc/systemd/system/mosideck.service
+if [ "$APP" = mosisail ]; then SHELL_BIN=/usr/sbin/nologin; else SHELL_BIN=/bin/bash; fi
+getent group "$APP" >/dev/null || groupadd --system "$APP"
+id "$APP" >/dev/null 2>&1 || useradd --system --gid "$APP" --home-dir "/var/lib/$APP" --create-home --shell "$SHELL_BIN" "$APP"
+install -d -m 0700 -o "$APP" -g "$APP" "/var/lib/$APP"
+install -d -m 0755 "/etc/$APP"
+install -m 0755 "$BIN" "/usr/local/bin/$APP"
+[ -f "/etc/$APP/config.toml" ] || install -m 0644 "$DEPLOY/$APP.config.toml" "/etc/$APP/config.toml"
+install -m 0644 "$DEPLOY/$APP.service" "/etc/systemd/system/$APP.service"
 
 systemctl daemon-reload
-systemctl enable mosideck >/dev/null
-systemctl restart mosideck
+systemctl enable "$APP" >/dev/null
+systemctl restart "$APP"
 
 IP=$(hostname -I 2>/dev/null | awk '{print $1}')
+if [ "$APP" = mosisail ]; then
+cat <<MSG
+
+MosiSail $TAG laeuft.
+  Oeffnen:  https://mosi.sail  (oder https://${IP:-<server-ip>})
+  Name:     DNS-Eintrag  mosi.sail -> ${IP:-<server-ip>}  im Router / Pi-hole anlegen
+  Zertifikat: self-signed, liegt unter /var/lib/mosisail/mosisail.crt (auf Geraeten als vertrauenswuerdig installierbar)
+  Setup:    Beim ersten Aufruf Benutzer im Browser anlegen
+  Update:   Installer-Befehl einfach erneut ausfuehren
+MSG
+else
 cat <<MSG
 
 MosiDeck $TAG laeuft.
@@ -81,3 +97,4 @@ MosiDeck $TAG laeuft.
   Setup:    Beim ersten Aufruf Admin-Benutzer im Browser anlegen
   Update:   Installer-Befehl einfach erneut ausfuehren
 MSG
+fi

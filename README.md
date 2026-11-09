@@ -1,3 +1,46 @@
+# MosiDeck & MosiSail
+
+Zwei kleine, eigenständige Apps für dein Homelab, jeweils **ein Go-Binary** ohne Datenbank und ohne Laufzeit-Abhängigkeiten
+(Frontend eingebettet, keine CDN-Skripte). Sie teilen sich nur das gemeinsame Sicherheits-Fundament (`internal/webcore`).
+
+| App | Adresse | Zweck |
+|---|---|---|
+| **MosiDeck** | `https://mosi.homelab:8443` | Homelab-Cockpit: Login, Web-Terminal, Live-Auslastung |
+| **MosiSail** | `https://mosi.sail` (Port 443) | Segel-Cockpit: Wetter & Wind, Windkarte, Logbuch pro Jahr, Saisonabschluss |
+
+## MosiSail installieren (Debian/Ubuntu, systemd, als root)
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/Mosi-pro/debian-watch/main/deploy/install.sh | bash -s -- mosisail
+```
+
+Danach:
+
+1. **DNS-Eintrag** `mosi.sail → Server-IP` im Router (Fritz!Box: Heimnetz → Netzwerk → Gerät) oder in Pi-hole/dnsmasq anlegen.
+2. `https://mosi.sail` öffnen, Zertifikatswarnung bestätigen (self-signed, `/var/lib/mosisail/mosisail.crt` lässt sich auf Geräten als vertrauenswürdig installieren) und beim ersten Aufruf den Benutzer anlegen.
+
+Gibt es noch kein GitHub-Release, baut der Installer MosiSail selbst aus dem Quellcode (lädt bei Bedarf ein temporäres Go).
+Update: denselben Befehl erneut ausführen.
+
+### Was MosiSail kann
+
+- **Cockpit:** Windrose mit Böen-Ring, Wind in kn und Beaufort, Segelbedingungen, Luft-/Wassertemperatur, Luftdruck, Pegel,
+  Regen, Sonne/Mond, 24–72 h Windverlauf (Herrsching/Utting) und Stundenvorhersage.
+- **Karte:** Ammersee mit animiertem Windfeld, Wind-Pfeilen, Zeitschieber für die Vorhersage, Stationen und deinen Törn-Routen.
+- **Logbuch:** pro Jahr, Törns mit Datum, Zeiten, Boot, Crew, Seemeilen, Wind, Notizen und Route (Karte anklicken oder GPX importieren).
+  „Aktuelles Wetter übernehmen“ füllt die Windwerte automatisch.
+- **Saison:** Kennzahlen, Monatsdiagramm, Crew-/Boots-/Törn-Art-Ranglisten, Routenkarte, Export (CSV/JSON), Druck/PDF.
+  **Saisonabschluss:** friert die Zahlen ein, speichert deinen Rückblick und sperrt die Einträge des Jahres (jederzeit wieder öffenbar).
+
+Datenquelle für Wetter/Wind: die Daten von [Ammerseewetter](https://zebrafell.onrender.com/) (Station Herrsching/Utting, Ammerseeboje),
+Vorhersage per [Open-Meteo](https://open-meteo.com/). Der Server holt und cached die Daten (2–30 min), der Browser spricht nur mit MosiSail.
+Das Logbuch liegt in `/var/lib/mosisail/sail.json`. Die Windwerte sind eine Orientierung und ersetzen keine eigene Lagebeurteilung.
+Die Kartenkacheln lädt der Browser von OpenStreetMap bzw. CARTO.
+
+Konfiguration: `/etc/mosisail/config.toml` (Beispiel: `deploy/mosisail.config.toml`).
+
+---
+
 # MosiDeck
 
 Homelab-Cockpit als **ein einziges Go-Binary**: Login (optional 2FA), Web-Terminal und Live-Auslastung.
@@ -6,7 +49,7 @@ Keine Datenbank, keine Laufzeit-Abhängigkeiten, Frontend ist eingebettet (`go:e
 ## Installation (Debian/Ubuntu, systemd)
 
 ```bash
-curl -fsSL https://raw.githubusercontent.com/Mosi-pro/debian-watch/main/deploy/install.sh | sudo bash
+curl -fsSL https://raw.githubusercontent.com/Mosi-pro/debian-watch/main/deploy/install.sh | bash
 ```
 
 Das Script lädt das passende Release (amd64/arm64), prüft die SHA-256-Summe, legt den Systembenutzer `mosideck`,
@@ -16,7 +59,7 @@ Beim ersten Aufruf von `https://<server-ip>:8443` legst du im Browser den Admin 
 Alternativen: `.deb` aus den Releases (`apt install ./mosideck_*.deb`) oder Docker
 (`deploy/docker-compose.yml`, Image `ghcr.io/mosi-pro/debian-watch`; Terminal = Shell im Container).
 
-**Update:** `sudo mosideck update && sudo systemctl restart mosideck`
+**Update:** den Installer-Befehl erneut ausführen (oder `mosideck update && systemctl restart mosideck`, sobald ein Release existiert)
 
 ## Erreichbar unter mosi.homelab
 

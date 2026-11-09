@@ -62,7 +62,7 @@ func get(url string) (io.ReadCloser, error) {
 }
 
 // Apply installs the newest release if it differs from current. Returns the new tag.
-func Apply(current string) (string, error) {
+func Apply(app, current string) (string, error) {
 	r, err := latest()
 	if err != nil {
 		return "", err
@@ -70,11 +70,12 @@ func Apply(current string) (string, error) {
 	if strings.TrimPrefix(r.Tag, "v") == strings.TrimPrefix(current, "v") {
 		return r.Tag, errors.New("bereits aktuell")
 	}
-	want := fmt.Sprintf("_%s_%s.tar.gz", runtime.GOOS, runtime.GOARCH)
+	want := fmt.Sprintf("%s_", app)
+	suffix := fmt.Sprintf("_%s_%s.tar.gz", runtime.GOOS, runtime.GOARCH)
 	var tarURL, tarName, sumURL string
 	for _, a := range r.Assets {
 		switch {
-		case strings.HasSuffix(a.Name, want):
+		case strings.HasPrefix(a.Name, want) && strings.HasSuffix(a.Name, suffix):
 			tarURL, tarName = a.URL, a.Name
 		case a.Name == "checksums.txt":
 			sumURL = a.URL
@@ -136,12 +137,12 @@ func Apply(current string) (string, error) {
 	for {
 		hd, err := tr.Next()
 		if err == io.EOF {
-			return "", errors.New("Binary 'mosideck' nicht im Archiv gefunden")
+			return "", errors.New("Binary '" + app + "' nicht im Archiv gefunden")
 		}
 		if err != nil {
 			return "", err
 		}
-		if hd.Typeflag == tar.TypeReg && filepath.Base(hd.Name) == "mosideck" {
+		if hd.Typeflag == tar.TypeReg && filepath.Base(hd.Name) == app {
 			out, err := os.OpenFile(newBin, os.O_CREATE|os.O_WRONLY|os.O_TRUNC, 0o755)
 			if err != nil {
 				return "", err

@@ -22,7 +22,8 @@ type Config struct {
 	AllowRoot    bool // allow the terminal to run as root (NOT recommended)
 	Shell        string
 	SessionHours int
-	TrustProxy   bool // trust X-Forwarded-For (only behind your own proxy)
+	TrustProxy   bool   // trust X-Forwarded-For (only behind your own proxy)
+	WeatherURL   string // MosiSail: API-Basis des Ammerseewetters
 }
 
 func Default() Config {
@@ -34,9 +35,19 @@ func Default() Config {
 	}
 }
 
-// Load reads path (if it exists) on top of the defaults.
-func Load(path string) (Config, error) {
-	c := Default()
+// SailDefault: Voreinstellungen der Segel-App (mosi.sail ohne Port).
+func SailDefault() Config {
+	return Config{
+		Listen: "0.0.0.0:443", RedirectHTTP: "0.0.0.0:80", Hostname: "mosi.sail",
+		DataDir: "/var/lib/mosisail", SessionHours: 24 * 7,
+	}
+}
+
+// Load reads path (if it exists) on top of the MosiDeck defaults.
+func Load(path string) (Config, error) { return LoadWith(path, Default()) }
+
+// LoadWith reads path (if it exists) on top of the given defaults.
+func LoadWith(path string, c Config) (Config, error) {
 	f, err := os.Open(path)
 	if err != nil {
 		if os.IsNotExist(err) {
@@ -85,6 +96,8 @@ func Load(path string) (Config, error) {
 			c.AllowRoot = b
 		case "trust_proxy":
 			c.TrustProxy = b
+		case "weather_url":
+			c.WeatherURL = v
 		case "shell":
 			c.Shell = v
 		case "session_hours":

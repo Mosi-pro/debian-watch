@@ -43,7 +43,7 @@ func main() {
 	case "version":
 		fmt.Println(version)
 	case "update":
-		tag, err := update.Apply(version)
+		tag, err := update.Apply("mosideck", version)
 		if err != nil {
 			log.Fatalf("Update: %v (%s)", err, tag)
 		}

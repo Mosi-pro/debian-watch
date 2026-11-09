@@ -10,7 +10,7 @@ FROM alpine:3.20
 RUN apk add --no-cache bash sudo htop tmux vim curl \
  && adduser -D -s /bin/bash mosideck && mkdir -p /data && chown mosideck /data
 COPY --from=build /mosideck /usr/local/bin/mosideck
-COPY deploy/config.toml /etc/mosideck/config.toml
+COPY deploy/mosideck.config.toml /etc/mosideck/config.toml
 USER mosideck
 EXPOSE 8443
 VOLUME /data

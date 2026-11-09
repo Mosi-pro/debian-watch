@@ -1,0 +1,25 @@
+# MosiSail Konfiguration (key = value)
+
+# https://mosi.sail ohne Port: Standard 443 + HTTP-Redirect auf 80.
+# DNS-Eintrag im Router/Pi-hole: mosi.sail -> Server-IP
+listen = "0.0.0.0:443"
+redirect_http = "0.0.0.0:80"
+hostname = "mosi.sail"
+data_dir = "/var/lib/mosisail"
+
+# Ammerseewetter-API (zebrafell). Nur aendern, wenn sich die Adresse aendert.
+# weather_url = "https://zebrafell-server.onrender.com"
+
+# Eigenes Zertifikat (z.B. interne CA) statt Self-Signed:
+# tls_cert = "/etc/mosisail/mosi.crt"
+# tls_key  = "/etc/mosisail/mosi.key"
+
+# Hinter eigenem Reverse-Proxy (Caddy/nginx) ohne TLS im Dienst:
+# disable_tls = true
+# listen = "127.0.0.1:8081"
+# trust_proxy = true
+
+session_hours = 168
+
+# NICHT empfohlen:
+# allow_public = false   # Zugriff auch aus oeffentlichen IP-Bereichen erlauben

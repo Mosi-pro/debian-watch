@@ -1,41 +1,70 @@
 version: 2
-project_name: mosideck
+project_name: mosi
 before:
   hooks:
     - go mod tidy
 builds:
-  - main: ./cmd/mosideck
+  - id: mosideck
+    main: ./cmd/mosideck
     binary: mosideck
     env: [CGO_ENABLED=0]
     goos: [linux]
     goarch: [amd64, arm64]
     flags: [-trimpath]
     ldflags: ["-s -w -X main.version={{.Version}}"]
+  - id: mosisail
+    main: ./cmd/mosisail
+    binary: mosisail
+    env: [CGO_ENABLED=0]
+    goos: [linux]
+    goarch: [amd64, arm64]
+    flags: [-trimpath]
+    ldflags: ["-s -w -X main.version={{.Version}}"]
 archives:
-  - formats: [tar.gz]
+  - id: mosideck
+    ids: [mosideck]
+    formats: [tar.gz]
     name_template: "mosideck_{{ .Version }}_{{ .Os }}_{{ .Arch }}"
     files:
-      - src: deploy/config.toml
-        dst: deploy/
-      - src: deploy/mosideck.service
-        dst: deploy/
+      - {src: deploy/mosideck.config.toml, dst: deploy/}
+      - {src: deploy/mosideck.service, dst: deploy/}
+      - README.md
+  - id: mosisail
+    ids: [mosisail]
+    formats: [tar.gz]
+    name_template: "mosisail_{{ .Version }}_{{ .Os }}_{{ .Arch }}"
+    files:
+      - {src: deploy/mosisail.config.toml, dst: deploy/}
+      - {src: deploy/mosisail.service, dst: deploy/}
       - README.md
 checksum:
   name_template: checksums.txt
 nfpms:
-  - package_name: mosideck
+  - id: mosideck
+    package_name: mosideck
+    ids: [mosideck]
     vendor: Mosi-pro
     homepage: https://github.com/Mosi-pro/debian-watch
     description: Homelab-Cockpit - Login, Web-Terminal, Live-Metriken
     formats: [deb]
     bindir: /usr/local/bin
     contents:
-      - src: deploy/mosideck.service
-        dst: /etc/systemd/system/mosideck.service
-      - src: deploy/config.toml
-        dst: /etc/mosideck/config.toml
-        type: config|noreplace
+      - {src: deploy/mosideck.service, dst: /etc/systemd/system/mosideck.service}
+      - {src: deploy/mosideck.config.toml, dst: /etc/mosideck/config.toml, type: "config|noreplace"}
     scripts:
       postinstall: deploy/postinstall.sh
+  - id: mosisail
+    package_name: mosisail
+    ids: [mosisail]
+    vendor: Mosi-pro
+    homepage: https://github.com/Mosi-pro/debian-watch
+    description: MosiSail - Segel-Cockpit mit Wetter, Karte, Logbuch und Saisonabschluss
+    formats: [deb]
+    bindir: /usr/local/bin
+    contents:
+      - {src: deploy/mosisail.service, dst: /etc/systemd/system/mosisail.service}
+      - {src: deploy/mosisail.config.toml, dst: /etc/mosisail/config.toml, type: "config|noreplace"}
+    scripts:
+      postinstall: deploy/postinstall-mosisail.sh
 changelog:
   sort: asc

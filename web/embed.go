@@ -1,7 +1,8 @@
-// Package web embeds the static frontend into the binary.
+// Package web embeds the static frontends (MosiDeck and MosiSail) into the binaries.
 package web
 
 import "embed"
 
-//go:embed static
+//go:embed all:static
+//go:embed all:sail
 var FS embed.FS

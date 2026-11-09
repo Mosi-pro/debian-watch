@@ -1,4 +1,4 @@
-package server
+package webcore
 
 import (
 	"crypto/ecdsa"

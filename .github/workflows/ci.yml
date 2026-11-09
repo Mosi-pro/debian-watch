@@ -13,4 +13,5 @@ jobs:
       - run: test -z "$(gofmt -l .)"
       - run: go vet ./...
       - run: go test -race ./...
-      - run: go build ./cmd/mosideck
+      - run: go build ./cmd/mosideck ./cmd/mosisail
+      - run: for f in web/static/app.js web/sail/*.js; do node --check "$f"; done
