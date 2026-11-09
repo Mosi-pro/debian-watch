@@ -19,7 +19,7 @@ import (
 )
 
 // CSP erlaubt zusätzlich die Kartenkacheln (OpenStreetMap, CARTO).
-const csp = "default-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data: https://tile.openstreetmap.org https://*.basemaps.cartocdn.com; connect-src 'self'; frame-ancestors 'none'; base-uri 'none'; form-action 'self'"
+const csp = "default-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data: https://*.basemaps.cartocdn.com; connect-src 'self'; frame-ancestors 'none'; base-uri 'none'; form-action 'self'"
 
 type App struct {
 	core    *webcore.Core

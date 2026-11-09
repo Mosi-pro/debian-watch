@@ -1,46 +1,75 @@
 'use strict';
 let ctx = { cleanup: null };
+let liveTimer = null;
 
 async function boot() {
-  clearTimers(); ctx.cleanup && ctx.cleanup(); ctx.cleanup = null;
+  clearTimers(); clearInterval(liveTimer); ctx.cleanup && ctx.cleanup(); ctx.cleanup = null;
   let st = {};
   try { st = await (await fetch('/api/state')).json(); } catch {}
   S.user = st.user || null; S.csrf = st.csrf || null; S.totp = !!st.totp_enabled;
   if (S.user) return shell();
-  loginView(st.setup_needed);
+  gateView(st.setup_needed);
 }
 
-function loginView(setup) {
+// ---- Anmeldung ----
+function gateView(setup) {
   const err = h('div', { class: 'err', role: 'alert' });
-  const u = h('input', { autocomplete: 'username', required: true, autofocus: true }), p = h('input', { type: 'password', autocomplete: setup ? 'new-password' : 'current-password', required: true });
-  const c = h('input', { inputmode: 'numeric', autocomplete: 'one-time-code', maxlength: 6, placeholder: '123456' });
-  const cw = h('div', { hidden: true }, h('label', {}, '2FA-Code'), c);
+  const u = h('input', { autocomplete: 'username', required: true, autofocus: true, id: 'u' }), p = h('input', { type: 'password', autocomplete: setup ? 'new-password' : 'current-password', required: true, id: 'p' });
+  const c = h('input', { inputmode: 'numeric', autocomplete: 'one-time-code', maxlength: 6, placeholder: '123456', id: 'c' });
+  const cw = h('div', { hidden: true }, h('label', { class: 'f', for: 'c' }, 'Code aus der Authenticator-App'), c);
+  const btn = h('button', { class: 'btn pri' }, setup ? 'Konto anlegen' : 'Anmelden');
   const form = h('form', { onsubmit: async e => {
-    e.preventDefault(); err.textContent = '';
+    e.preventDefault(); err.textContent = ''; btn.disabled = true;
     try { await api(setup ? '/api/setup' : '/api/login', 'POST', { user: u.value, password: p.value, code: c.value }); boot(); }
-    catch (x) { if (x.data && x.data.need_totp) { cw.hidden = false; c.focus(); } err.textContent = x.message; }
-  } }, h('label', {}, 'Benutzer'), u, h('label', {}, setup ? 'Passwort (min. 10 Zeichen)' : 'Passwort'), p, cw, h('button', { class: 'btn pri' }, setup ? 'Admin anlegen' : 'Anmelden'), err);
-  $app.replaceChildren(h('div', { class: 'center' }, h('div', { class: 'card login' },
-    h('div', { class: 'logo' }, icon('logo'), h('span', {}, 'Mosi', h('b', {}, 'Sail'))), h('p', { class: 'mut', style: 'margin:0 0 8px' }, setup ? 'Ersteinrichtung: lege den Admin-Benutzer an.' : 'Segel-Cockpit · Ammersee'), form, h('p', { class: 'mut small', style: 'margin:16px 0 0;text-align:center' }, location.protocol === 'https:' ? h('a', { href: '/ca.crt', style: 'color:var(--acc)' }, 'Zertifikat herunterladen') : null))));
+    catch (x) { btn.disabled = false; if (x.data && x.data.need_totp) { cw.hidden = false; c.focus(); } err.textContent = x.message; }
+  } }, h('label', { class: 'f', for: 'u' }, 'Benutzer'), u, h('label', { class: 'f', for: 'p' }, setup ? 'Passwort (mindestens 10 Zeichen)' : 'Passwort'), p, cw, btn, err);
+  const rose = roseSvg(225);
+  requestAnimationFrame(() => requestAnimationFrame(() => { rose.querySelector('#needle').style.transform = 'rotate(215deg)'; }));
+  $app.replaceChildren(h('div', { class: 'gate' },
+    h('div', { class: 'art' }, rose, h('span', { class: 'cap' }, 'Ammersee 47°59′ N 11°08′ O')),
+    h('div', { class: 'form' }, h('div', { class: 'logo' }, logo(), h('span', {}, 'Mosi', h('i', {}, 'Sail'))), h('p', { class: 'lead' }, setup ? 'Willkommen an Bord. Lege dein Konto an, um zu starten.' : 'Wind, Karte und Logbuch für den Ammersee.'), form,
+      location.protocol === 'https:' ? h('p', { class: 'small mut', style: 'margin-top:22px' }, 'Zertifikatswarnung im Browser? ', h('a', { href: '/ca.crt', style: 'color:var(--mag)' }, 'Zertifikat herunterladen'), ' und auf dem Gerät installieren.') : null)));
 }
 
-const VIEWS = [['cockpit', 'Cockpit', cockpitView], ['map', 'Karte', mapView], ['log', 'Logbuch', logbookView], ['season', 'Saison', seasonView]];
-const main = h('main');
-let nav;
+// ---- Gerüst ----
+const VIEWS = [['cockpit', 'Cockpit', 'compass', cockpitView], ['map', 'Karte', 'chart', mapView], ['log', 'Logbuch', 'book', logbookView], ['season', 'Saison', 'flag', seasonView]];
+const TITLES = { cockpit: 'Cockpit', map: 'Windkarte', log: 'Logbuch', season: 'Saison', account: 'Konto' };
+let nav, title, main, liveBtn, themeBtn;
 
 function shell() {
-  nav = h('nav', { class: 'tabs', 'aria-label': 'Bereiche' }, VIEWS.map(([k, l]) => h('button', { class: 'tab', 'data-v': k, onclick: () => { S.view = k; render(); } }, icon(k), h('span', {}, l))));
-  const top = h('header', { class: 'top' }, h('div', { class: 'brand' }, icon('logo'), h('span', {}, 'Mosi', h('b', {}, 'Sail'))), nav,
-    h('button', { class: 'userbtn', onclick: () => { S.view = 'account'; render(); } }, '👤 ' + S.user));
-  $app.replaceChildren(top, main);
+  const item = (k, l, i, fn) => h('button', { class: 'nv', 'data-v': k, onclick: fn || (() => { S.view = k; render(); }) }, ic(i), h('span', {}, l));
+  themeBtn = h('button', { class: 'nv theme', onclick: () => setTheme(prefersDark() ? 'light' : 'dark'), 'aria-label': 'Design wechseln' });
+  const paintTheme = () => themeBtn.replaceChildren(ic(prefersDark() ? 'sun' : 'moon'), h('span', {}, prefersDark() ? 'Hell' : 'Dunkel'));
+  paintTheme(); document.addEventListener('themechange', paintTheme);
+  nav = h('nav', { 'aria-label': 'Bereiche' }, VIEWS.map(([k, l, i]) => item(k, l, i)));
+  const rail = h('aside', { class: 'rail' }, h('div', { class: 'mark' }, logo()), nav, h('div', { class: 'foot' }, themeBtn, item('account', 'Konto', 'user')));
+  title = h('h1', {}, '');
+  liveBtn = h('button', { class: 'live', 'aria-label': 'Aktueller Wind, zum Cockpit', onclick: () => { S.view = 'cockpit'; render(); } });
+  const bar = h('header', { class: 'bar' }, title, h('span', { class: 'where' }, 'Ammersee'), h('span', { class: 'sp' }), liveBtn);
+  main = h('main');
+  $app.replaceChildren(h('div', { class: 'app' }, rail, h('div', { class: 'stage' }, bar, main)));
+  Live.subs = []; Live.on(paintLive); Live.load(); clearInterval(liveTimer); liveTimer = setInterval(() => Live.load(), 120e3);
   render();
+}
+
+function paintLive(c, err) {
+  if (!c) { liveBtn.replaceChildren(h('span', { class: 'g' }, err ? 'Wind: keine Daten' : '…')); return; }
+  const st = c.station, col = windColor(st.wind_kn ?? 0), age = st.time ? (Date.now() - new Date(st.time)) / 60000 : 0;
+  liveBtn.replaceChildren(
+    h('div', { class: 'nm' }, h('span', { class: 'dot' + (age > 45 || c.stale ? ' off' : '') }), 'Herrsching', h('br'), st.time ? hhmm(st.time) + ' Uhr' : ''),
+    st.wind_dir != null ? windArrow(st.wind_dir, col, 26) : null,
+    h('div', { class: 'v num' }, f0(st.wind_kn), h('small', {}, 'kn')),
+    h('div', { class: 'g' }, `Böen ${f0(st.gust_kn)}`, h('br'), dirText(st.wind_dir)));
 }
 
 async function render() {
   clearTimers(); ctx.cleanup && ctx.cleanup(); ctx.cleanup = null;
-  nav.querySelectorAll('.tab').forEach(b => b.classList.toggle('on', b.dataset.v === S.view));
-  main.replaceChildren(); main.style.padding = '';
+  document.querySelectorAll('.nv[data-v]').forEach(b => b.classList.toggle('on', b.dataset.v === S.view));
+  title.textContent = TITLES[S.view] || '';
+  main.replaceChildren(); window.scrollTo(0, 0);
+  const holder = h('div', { class: 'view' }); main.append(holder);
   const v = VIEWS.find(x => x[0] === S.view);
-  if (v) await v[2](main, ctx); else accountView(main);
+  if (v) await v[3](holder, ctx); else accountView(holder);
 }
+window.render = render;
 boot();

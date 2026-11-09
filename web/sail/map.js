@@ -53,7 +53,7 @@ class Particles {
     if (document.hidden) return;
     const g = this.g, m = this.map;
     g.globalCompositeOperation = 'destination-out'; g.fillStyle = 'rgba(0,0,0,.075)'; g.fillRect(0, 0, this.W, this.H);
-    g.globalCompositeOperation = 'source-over'; g.lineWidth = 1.5; g.lineCap = 'round';
+    g.globalCompositeOperation = 'source-over'; g.lineWidth = 1.7; g.lineCap = 'round';
     for (const p of this.p) {
       const ll = m.containerPointToLatLng([p.x, p.y]), w = this.field.sample(ll.lat, ll.lng);
       if (w.s < 0.3 || ++p.age > p.max) { this.spawn(p); continue; }
@@ -71,46 +71,47 @@ class Particles {
 async function mapView(root, ctx) {
   const wrap = h('div', { class: 'mapwrap' });
   const mapEl = h('div', { id: 'map' });
-  const legend = h('div', { class: 'maplegend' }, h('div', { class: 'mut' }, 'Wind in kn (Beaufort)'),
+  const legend = h('div', { class: 'legend' }, h('div', {}, 'Wind in kn'),
     h('div', { class: 'sc' }, ...[0, 2, 5, 9, 13, 19, 25, 31, 38].map(k => h('i', { style: `background:${windColor(k)}`, title: `${k} kn` }))),
-    h('div', { class: 'row small mut', style: 'justify-content:space-between;margin-top:2px;gap:0' }, h('span', {}, '0'), h('span', {}, '10'), h('span', {}, '20'), h('span', {}, '30+')));
+    h('div', { class: 'tk' }, h('span', {}, '0'), h('span', {}, '10'), h('span', {}, '20'), h('span', {}, '30+')));
   const slider = h('input', { type: 'range', min: 0, max: 0, value: 0, 'aria-label': 'Vorhersagezeit' });
-  const lab = h('div', { class: 'num', style: 'min-width:120px;font-weight:650' }, '…');
-  const play = h('button', { class: 'btn', title: 'Abspielen' }, '▶');
-  const now = h('button', { class: 'btn' }, 'Jetzt');
-  const themeBtn = h('button', { class: 'btn' }, prefersDark() ? '☀ Hell' : '☾ Dunkel');
-  const routesBtn = h('button', { class: 'btn' }, '⛵ Törns ' + S.year);
+  const lab = h('div', { class: 'tl num' }, '…');
+  const play = h('button', { class: 'btn sm', title: 'Abspielen', 'aria-label': 'Abspielen' }, '▶');
+  const now = h('button', { class: 'btn sm quiet' }, 'Jetzt');
+  const routesBtn = h('button', { class: 'btn' }, ic('route'), 'Törns ' + S.year);
   const info = h('span', { class: 'mut small' }, '');
-  wrap.append(mapEl, h('div', { class: 'maptools' }, themeBtn, routesBtn), legend, h('div', { class: 'mapui' }, play, slider, lab, now, info));
+  wrap.append(mapEl, h('div', { class: 'maptools' }, routesBtn), legend, h('div', { class: 'mapui' }, play, slider, lab, now, info));
   root.append(wrap);
 
   const map = L.map(mapEl, { zoomControl: true, attributionControl: true, zoomSnap: 0.5 }).setView([LAKE.lat, LAKE.lon], LAKE.zoom);
-  let dark = prefersDark(), tiles = tileLayer(dark).addTo(map);
-  themeBtn.onclick = () => { dark = !dark; map.removeLayer(tiles); tiles = tileLayer(dark).addTo(map); themeBtn.textContent = dark ? '☀ Hell' : '☾ Dunkel'; };
-  ctx.cleanup = () => { parts && parts.destroy(); clearInterval(timer); map.remove(); };
+  let tiles = tileLayer(prefersDark()).addTo(map);
+  const onTheme = () => { map.removeLayer(tiles); tiles = tileLayer(prefersDark()).addTo(map); };
+  document.addEventListener('themechange', onTheme);
+  ctx.cleanup = () => { document.removeEventListener('themechange', onTheme); parts && parts.destroy(); clearInterval(timer); map.remove(); };
 
   // Törn-Routen
   let routeLayer = null;
   routesBtn.onclick = async () => {
-    if (routeLayer) { map.removeLayer(routeLayer); routeLayer = null; routesBtn.classList.remove('pri'); return; }
+    if (routeLayer) { map.removeLayer(routeLayer); routeLayer = null; routesBtn.classList.remove('on'); return; }
     try {
       const lb = await api('/api/logbook?year=' + S.year);
       routeLayer = L.featureGroup();
-      lb.entries.filter(e => e.route && e.route.length > 1).forEach((e, i) => {
-        L.polyline(e.route, { color: ['#ff8a3d', '#33d6ff', '#2dd4a5', '#f0436b', '#d4e157', '#b388ff'][i % 6], weight: 3.5, opacity: .9 })
-          .bindPopup(`<b>${e.title.replace(/[<>&]/g, '')}</b><br>${e.date} · ${e.distance} sm`).addTo(routeLayer);
+      lb.entries.filter(e => e.route && e.route.length > 1).forEach(e => {
+        const pop = h('div', {}, h('b', {}, e.title), h('br'), `${e.date} · ${f1(e.distance)} sm`);
+        L.polyline(e.route, { color: '#b0245f', weight: 3.5, opacity: .95 }).bindPopup(pop).addTo(routeLayer);
       });
       if (!routeLayer.getLayers().length) { toast('Keine Routen im Logbuch ' + S.year); routeLayer = null; return; }
-      routeLayer.addTo(map); map.fitBounds(routeLayer.getBounds().pad(.15)); routesBtn.classList.add('pri');
+      routeLayer.addTo(map); map.fitBounds(routeLayer.getBounds().pad(.15)); routesBtn.classList.add('on');
     } catch (e) { toast(e.message); }
   };
 
   // Stationen
-  const stIcon = (txt, col) => L.divIcon({ className: '', html: `<div style="display:inline-block;background:${col};color:#04202c;border-radius:999px;padding:3px 9px;font:700 12px system-ui;box-shadow:0 2px 8px rgba(0,0,0,.5);white-space:nowrap">${txt}</div>`, iconSize: null, iconAnchor: [-6, 12] });
+  const stIcon = txt => L.divIcon({ className: '', html: `<div class="stmark">${txt}</div>`, iconSize: null, iconAnchor: [-6, 12] });
   Promise.all([api('/api/weather/current').catch(() => null), api('/api/weather/history?days=1').catch(() => null)]).then(([c, hs]) => {
-    if (c && c.station.wind_kn != null) L.marker([47.9993, 11.179], { icon: stIcon(`Herrsching ${f0(c.station.wind_kn)}/${f0(c.station.gust_kn)} kn ${dirText(c.station.wind_dir)}`, windColor(c.station.wind_kn)), keyboard: false }).bindTooltip('Wetterstation Herrsching (Position ungefähr)').addTo(map);
+    if (!map._loaded && !map.getContainer().isConnected) return;
+    if (c && c.station.wind_kn != null) L.marker([47.9993, 11.179], { icon: stIcon(`Herrsching ${f0(c.station.wind_kn)}/${f0(c.station.gust_kn)} kn ${dirText(c.station.wind_dir)}`), keyboard: false }).bindTooltip('Wetterstation Herrsching (Position ungefähr)').addTo(map);
     const lastU = hs && [...hs.points].reverse().find(p => p.u_wind != null);
-    if (lastU) L.marker([48.03, 11.084], { icon: stIcon(`Utting ${f0(lastU.u_wind)}/${f0(lastU.u_gust)} kn ${dirText(lastU.u_dir)}`, windColor(lastU.u_wind)), keyboard: false }).bindTooltip('Wetterstation Utting (Position ungefähr)').addTo(map);
+    if (lastU) L.marker([48.03, 11.084], { icon: stIcon(`Utting ${f0(lastU.u_wind)}/${f0(lastU.u_gust)} kn ${dirText(lastU.u_dir)}`), keyboard: false }).bindTooltip('Wetterstation Utting (Position ungefähr)').addTo(map);
   });
 
   // Vorhersage laden
@@ -131,12 +132,12 @@ async function mapView(root, ctx) {
     const i = i0 + k; field.setHour(i);
     F.points.forEach((p, j) => {
       const w = p.wind[i], col = windColor(w), el = markers[j].getElement(); if (!el) return;
-      el.innerHTML = `<div class="warrow"><svg viewBox="0 0 24 24" width="30" height="30" style="transform:rotate(${(p.dir[i] + 180) % 360}deg)"><path d="M12 2l6.5 10h-4.5v10h-4V12H5.5z" fill="${col}" stroke="rgba(0,0,0,.45)" stroke-width="1"/></svg><b>${Math.round(w)}</b></div>`;
+      el.innerHTML = `<div class="warrow"><svg viewBox="0 0 24 24" width="30" height="30" style="transform:rotate(${(p.dir[i] + 180) % 360}deg)"><path d="M12 2l6.5 10h-4.5v10h-4V12H5.5z" fill="${col}" stroke="#fff" stroke-width="1.2"/></svg><b>${Math.round(w)}</b></div>`;
     });
     const t = new Date(F.times[i] + ':00');
     lab.textContent = `${WD[t.getDay()]} ${F.times[i].slice(11, 16)} Uhr`;
     const c = F.points[Math.floor(F.rows / 2) * F.cols + Math.floor(F.cols / 2)];
-    info.textContent = `Seemitte: Ø ${f0(c.wind[i])} / Böe ${f0(c.gust[i])} kn · ${dirText(c.dir[i])}`;
+    info.textContent = `Seemitte: Ø ${f0(c.wind[i])}, Böe ${f0(c.gust[i])} kn aus ${dirText(c.dir[i])}`;
   }
   map.whenReady(() => { show(0); parts = new Particles(map, field); parts.start(); });
   slider.oninput = () => show(+slider.value);

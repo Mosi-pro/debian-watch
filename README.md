@@ -36,7 +36,9 @@ Update: denselben Befehl erneut ausführen.
 Datenquelle für Wetter/Wind: die Daten von [Ammerseewetter](https://zebrafell.onrender.com/) (Station Herrsching/Utting, Ammerseeboje),
 Vorhersage per [Open-Meteo](https://open-meteo.com/). Der Server holt und cached die Daten (2–30 min), der Browser spricht nur mit MosiSail.
 Das Logbuch liegt in `/var/lib/mosisail/sail.json`. Die Windwerte sind eine Orientierung und ersetzen keine eigene Lagebeurteilung.
-Die Kartenkacheln lädt der Browser von OpenStreetMap bzw. CARTO.
+Die Kartenkacheln lädt der Browser von CARTO (OpenStreetMap-Daten). Die Schrift Barlow (SIL Open Font License) wird mitgeliefert, es gibt keine externen Skripte oder Schriften.
+
+Das Design folgt einer Seekarte: Papier und Tinte, Seekarten-Magenta als einziger Akzent, helle und dunkle Nachtkarten-Ansicht (Umschalter in der Seitenleiste).
 
 Konfiguration: `/etc/mosisail/config.toml` (Beispiel: `deploy/mosisail.config.toml`).
 
